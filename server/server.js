@@ -2,9 +2,6 @@ const express = require('express');
 const mainController = require('./controllers/mainController');
 const app = express();
 
-// Template engine
-app.set('view engine', 'ejs');
-
 // Fire controllers
 app.use(express.static('./public'));
 mainController(app);

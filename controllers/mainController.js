@@ -84,10 +84,35 @@ module.exports = (app) => {
     app.use(bodyParser.json());       // to support JSON-encoded bodies
     app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
         extended: true
-    })); 
+    }));
+
+    app.post('/messages', (req, res) => {	
+        var message = new Message({from:req.body.from, message: req.body.message, date: Date.now(), })	
+        message.save((err, message) => {	
+            if(err) {	
+                throw err;	
+            }	
+            res.status(200).json({messageId: message._id})	
+        })	
+    })
 
     app.get('/conversations/:name', (req, res) => {
         Conversation.find({participants: req.params.name}, (err, conversations) => {
+            Message.find({conversation: { $in: conversations.map(convo => convo._id) }}).sort('-date').exec((err, messagesInConversation) => {                             
+                if (err) {
+                    throw err;
+                }
+                let result = conversations.map(convo => ({
+                    ...convo.toObject(),
+                    messages: messagesInConversation.filter(msg => convo._id.toString() === msg.conversation)
+                }))
+                res.json(result)
+            })
+        });
+    });
+
+    app.get('/conversations/', (req, res) => {
+        Conversation.find({participants: "Mason Prey"}, (err, conversations) => {
             Message.find({conversation: { $in: conversations.map(convo => convo._id) }}).sort('-date').exec((err, messagesInConversation) => {                             
                 if (err) {
                     throw err;
@@ -190,6 +215,15 @@ module.exports = (app) => {
 
     app.get('/profile/:userId', (req, res) => {;   
         User.find({userId: req.params.userId}, (err, user) =>{
+            if(err) {
+                throw err;
+            }
+            res.json(user);
+        })
+    });
+
+    app.get('/profile/', (req, res) => {;   
+        User.find({userId: 1}, (err, user) =>{
             if(err) {
                 throw err;
             }

@@ -86,28 +86,15 @@ module.exports = (app) => {
         extended: true
     })); 
 
-    app.get('/messages/:to/:from', (req, res) => {
-        Message.find({$or:[{to: req.params.to, from: req.params.from}, {to: req.params.from, from: req.params.to}]}).sort('-date').exec((err, messages) => {
-            res.json(messages);
-        })
-    });
-
-    app.post('/messages', (req, res) => {
-        var message = new Message({to: req.body.to, from:req.body.from, message: req.body.message, date: Date.now()})
-        message.save((err, message) => {
-            if(err) {
-                throw err;
-            }
-            res.status(200).json({messageId: message._id})
-        })
-    });
-
     app.get('/conversations/:name', (req, res) => {
         Conversation.find({participants: req.params.name}, (err, conversations) => {
-            Message.find({conversation: { $in: conversations.map(convo => convo._id) }}).sort('-date').exec((err, messagesInConversation) => {
+            Message.find({conversation: { $in: conversations.map(convo => convo._id) }}).sort('-date').exec((err, messagesInConversation) => {                             
+                if (err) {
+                    throw err;
+                }
                 let result = conversations.map(convo => ({
                     ...convo.toObject(),
-                    messages: messagesInConversation.toObject().filter(msg => msg.conversation !== convo._id)
+                    messages: messagesInConversation.filter(msg => convo._id.toString() === msg.conversation)
                 }))
                 res.json(result)
             })
@@ -184,7 +171,14 @@ module.exports = (app) => {
                 throw err;
             }
             console.log(currentUser);
-            var post = new Post({title: req.body.title, timestamp: Date.now(), user: currentUser, likes: 0, images: req.body.images})
+            var post = new Post({title: req.body.title, 
+                timestamp: Date.now(), 
+                user: currentUser, 
+                images: req.body.images, 
+                likes: Math.floor(Math.random() * 10),
+                comments: Math.floor(Math.random() * 10),
+                shares: Math.floor(Math.random() * 10)
+            })
             post.save((err, post) => {
                 if(err) {
                     throw err;
@@ -194,8 +188,8 @@ module.exports = (app) => {
         });
     });
 
-    app.get('/profile', (req, res) => {;   
-        User.find({userId: req.query.userId}, (err, user) =>{
+    app.get('/profile/:userId', (req, res) => {;   
+        User.find({userId: req.params.userId}, (err, user) =>{
             if(err) {
                 throw err;
             }

@@ -26,16 +26,21 @@ const userSchema = new mongoose.Schema({
 		},
 		bronze: Number,
 		silver: Number,
-		gold: Number,
+        gold: Number,
+        platinum: Number,
 		completion: Number
 	}]
 });
 
+const conversationSchema = new mongoose.Schema({
+    participants: [String]
+});
+
 const messageSchema = new mongoose.Schema({
-    from: Number,
-    to: Number,
+    from: String,
     message: String,
-    timestamp: Date
+    timestamp: Date,
+    conversation: String
 });
 
 const postSchema = new mongoose.Schema({
@@ -60,15 +65,19 @@ const postSchema = new mongoose.Schema({
             bronze: Number,
             silver: Number,
             gold: Number,
+            platinum: Number,
             completion: Number
         }]
     },
     likes: Number,
+	comments: Number,
+	shares: Number,
     images: [String]
 });
 
 const User = mongoose.model('User', userSchema);
 const Message = mongoose.model('Message', messageSchema);
+const Conversation = mongoose.model('Conversation', conversationSchema);
 const Post = mongoose.model('Post', postSchema);
 
 module.exports = (app) => {
@@ -91,6 +100,18 @@ module.exports = (app) => {
             }
             res.status(200).json({messageId: message._id})
         })
+    });
+
+    app.get('/conversations/:name', (req, res) => {
+        Conversation.find({participants: req.params.name}, (err, conversations) => {
+            Message.find({conversation: { $in: conversations.map(convo => convo._id) }}).sort('-date').exec((err, messagesInConversation) => {
+                let result = conversations.map(convo => ({
+                    ...convo.toObject(),
+                    messages: messagesInConversation.toObject().filter(msg => msg.conversation !== convo._id)
+                }))
+                res.json(result)
+            })
+        });
     });
     
     app.get('/friends', (req, res) => {
